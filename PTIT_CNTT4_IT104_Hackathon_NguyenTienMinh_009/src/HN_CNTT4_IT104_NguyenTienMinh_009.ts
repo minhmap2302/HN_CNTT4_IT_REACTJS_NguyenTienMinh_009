@@ -1,315 +1,247 @@
-// ===================== Domain Model =====================
 abstract class Course {
-  courseId: string
-  courseName: string
-  price: number
-  duration: number
-  students: number
+    courseId: string
+    courseName: string
+    price: number
+    duration: number
+    students: number = 0
 
-  constructor(courseId: string, courseName: string, price: number, duration: number) {
-    this.courseId = courseId
-    this.courseName = courseName
-    this.price = price
-    this.duration = duration
-    this.students = 0
-  }
+    constructor(courseId: string, courseName: string, price: number, duration: number) {
+        this.courseId = courseId
+        this.courseName = courseName
+        this.price = price
+        this.duration = duration
+    }
 
-  displayCourse(): void {
-    console.log(
-      `#${this.courseId} | ${this.courseName} | Gia: ${this.price} | Thoi luong: ${this.duration} | Hoc vien: ${this.students}`
-    )
-  }
+    displayCourse(): void {
+        console.log(`#${this.courseId} | ${this.courseName} | Giá: ${this.price} | Thời lượng: ${this.duration} | Học viên: ${this.students}`)
+    }
 
-  getCourse(discount?: number): string {
-    this.students++
-    let cost = this.price
-    if (discount) cost = Math.round(this.price * (1 - discount / 100))
-    return `Mua khoa hoc ${this.courseName} voi gia ${cost}`
-  }
+    getCourse(discount?: number): string {
+        this.students++
+        let cost = this.price
+        if (discount) cost = Math.round(this.price * (1 - discount / 100))
+        return `Mua khóa học ${this.courseName} với giá ${cost}`
+    }
 
-  abstract getCertificate(): string
-  abstract getRefundPolicy(): string
+    abstract getCertificate(): string
+    abstract getRefundPolicy(): string
 }
 
 class FreeCourse extends Course {
-  constructor(courseId: string, courseName: string, duration: number) {
-    super(courseId, courseName, 0, duration)
-  }
-  getCertificate(): string {
-    return "Khoa hoc mien phi khong co chung chi"
-  }
-  getRefundPolicy(): string {
-    return "Khong co chinh sach hoan tien"
-  }
+    constructor(courseId: string, courseName: string, duration: number) {
+        super(courseId, courseName, 0, duration)
+    }
+    getCertificate(): string {
+        return "Khóa học miễn phí không có chứng chỉ"
+    }
+    getRefundPolicy(): string {
+        return "Không có chính sách hoàn tiền"
+    }
 }
 
 class PaidCourse extends Course {
-  constructor(courseId: string, courseName: string, price: number, duration: number) {
-    super(courseId, courseName, price, duration)
-  }
-  getCertificate(): string {
-    return `Chung chi khoa hoc: ${this.courseName}`
-  }
-  getRefundPolicy(): string {
-    return this.duration < 2
-      ? "Hoan tien neu thoi gian hoc duoi 2 gio"
-      : "Khong hoan tien neu thoi gian hoc >= 2 gio"
-  }
+    constructor(courseId: string, courseName: string, price: number, duration: number) {
+        super(courseId, courseName, price, duration)
+    }
+    getCertificate(): string {
+        return `Chứng chỉ khóa học: ${this.courseName}`
+    }
+    getRefundPolicy(): string {
+        return this.duration < 2 ? "Hoàn tiền nếu thời gian học dưới 2 giờ" : "Không hoàn tiền"
+    }
 }
 
 type Discount = { code: string; value: number }
 
 class User {
-  id: string
-  name: string
-  email: string
-  phone: string
-  purchasedCourses: string[]
-  discounts: string[]
+    id: string
+    name: string
+    email: string
+    phone: string
+    purchasedCourses: string[] = []
+    discounts: string[] = []
 
-  constructor(id: string, name: string, email: string, phone: string) {
-    this.id = id
-    this.name = name
-    this.email = email
-    this.phone = phone
-    this.purchasedCourses = []
-    this.discounts = []
-  }
+    constructor(id: string, name: string, email: string, phone: string) {
+        this.id = id
+        this.name = name
+        this.email = email
+        this.phone = phone
+    }
 
-  getDetails(): string {
-    return `ID: ${this.id} | Ten: ${this.name} | Email: ${this.email} | SDT: ${this.phone}`
-  }
+    getDetails(): string {
+        return `ID: ${this.id} | Tên: ${this.name} | Email: ${this.email} | SDT: ${this.phone}`
+    }
 
-  buyCourse(courseId: string): void {
-    this.purchasedCourses.push(courseId)
-  }
+    buyCourse(course: string): void {
+        this.purchasedCourses.push(course)
+    }
 }
 
-// ===================== Manager =====================
 class CourseManager {
-  courses: Course[] = []
-  users: User[] = []
-  discounts: Discount[] = []
+    courses: Course[] = []
+    users: User[] = []
+    discounts: Discount[] = []
 
-  addCourse(type: "free" | "paid", courseName: string, coursePrice: number, courseDuration: number): void {
-    const id = "C" + (this.courses.length + 1)
-    const c: Course =
-      type === "free"
-        ? new FreeCourse(id, courseName, courseDuration)
-        : new PaidCourse(id, courseName, coursePrice, courseDuration)
-    this.courses.push(c)
-  }
-
-  createUser(name: string, email: string, phone: string): void {
-    const id = "U" + (this.users.length + 1)
-    this.users.push(new User(id, name, email, phone))
-  }
-
-  createNewDiscount(discountCode: string, discountValue: number): void {
-    this.discounts.push({ code: discountCode, value: discountValue })
-  }
-
-  // find / filter / reduce đều xuất hiện theo yêu cầu
-  handleBuyCourse(userId: string, courseId: string): string {
-    const u = this.users.find(x => x.id === userId)
-    const c = this.courses.find(x => x.courseId === courseId)
-    if (!u || !c) return "Khong tim thay"
-
-    // Chọn mã giảm giá lớn nhất mà user đang sở hữu (ưu tiên cao nhất)
-    let discountValue = 0
-    if (u.discounts.length > 0) {
-      const owned = this.discounts.filter(d => u.discounts.includes(d.code))
-      if (owned.length > 0) {
-        const best = owned.reduce((max, cur) => (cur.value > max.value ? cur : max))
-        discountValue = best.value
-        // dùng một mã tốt nhất rồi xóa nó khỏi ví
-        u.discounts = u.discounts.filter(code => code !== best.code)
-      }
+    addCourse(type: "free" | "paid", name: string, price: number, duration: number): void {
+        const id = "C" + (this.courses.length + 1)
+        const course = type === "free" ? new FreeCourse(id, name, duration) : new PaidCourse(id, name, price, duration)
+        this.courses.push(course)
     }
 
-    const msg = c.getCourse(discountValue)
-    u.buyCourse(c.courseId)
-    return msg
-  }
-
-  handleRefundCourse(userId: string, courseId: string): string {
-    const u = this.users.find(x => x.id === userId)
-    const c = this.courses.find(x => x.courseId === courseId)
-    if (!u || !c) return "Khong tim thay"
-
-    if (c instanceof PaidCourse && c.duration < 2) {
-      // hoàn tiền: gỡ khóa học ra khỏi danh sách đã mua
-      u.purchasedCourses = u.purchasedCourses.filter(pc => pc !== courseId)
-      // giảm lại students nếu cần
-      c.students = Math.max(0, c.students - 1)
-      return "Da hoan tien khoa hoc"
+    createUser(name: string, email: string, phone: string): void {
+        const id = "U" + (this.users.length + 1)
+        this.users.push(new User(id, name, email, phone))
     }
-    return "Khong the hoan tien"
-  }
 
-  listCourses(numOfStudents?: number): void {
-    let lst = this.courses
-    if (numOfStudents !== undefined) {
-      lst = lst.filter(c => c.students >= numOfStudents) // filter
+    createNewDiscount(code: string, value: number): void {
+        this.discounts.push({ code, value })
     }
-    lst.map(c => c.displayCourse()) // map
-  }
 
-  showUserInformation(email: string): void {
-    const u = this.users.find(x => x.email === email) // find
-    if (!u) {
-      console.log("Khong tim thay")
-      return
+    handleBuyCourse(userId: string, courseId: string): string {
+        const u = this.users.find(x => x.id === userId)
+        const c = this.courses.find(x => x.courseId === courseId)
+        if (!u || !c) return "Không tìm thấy"
+        let discountValue = 0
+        if (u.discounts.length > 0) {
+            const owned = this.discounts.filter(d => u.discounts.includes(d.code))
+            if (owned.length > 0) {
+                const best = owned.reduce((max, cur) => cur.value > max.value ? cur : max)
+                discountValue = best.value
+                u.discounts = u.discounts.filter(code => code !== best.code)
+            }
+        }
+        const msg = c.getCourse(discountValue)
+        u.buyCourse(c.courseId)
+        return msg
     }
-    console.log(u.getDetails())
-    console.log("Khoa hoc da mua:", u.purchasedCourses.join(", ") || "(trong)")
-    console.log("Ma giam gia:", u.discounts.join(", ") || "(trong)")
-  }
 
-  calculateTotalRevenue(): number {
-    return this.courses.reduce((sum, c) => sum + c.price * c.students, 0) // reduce
-  }
+    handleRefundCourse(userId: string, courseId: string): string {
+        const u = this.users.find(x => x.id === userId)
+        const c = this.courses.find(x => x.courseId === courseId)
+        if (!u || !c) return "Không tìm thấy"
+        if (c instanceof PaidCourse && c.duration < 2) {
+            u.purchasedCourses = u.purchasedCourses.filter(pc => pc !== courseId)
+            c.students = Math.max(0, c.students - 1)
+            return "Đã hoàn tiền khóa học"
+        }
+        return "Không thể hoàn tiền"
+    }
 
-  giftDiscount(userId: string, discountCode: string): void {
-    const u = this.users.find(x => x.id === userId) // find
-    if (!u) return console.log("Khong tim thay nguoi dung")
+    listCourses(numOfStudents?: number): void {
+        let lst = this.courses
+        if (numOfStudents !== undefined) lst = lst.filter(c => c.students >= numOfStudents)
+        lst.map(c => c.displayCourse())
+    }
 
-    const d = this.discounts.find(dd => dd.code === discountCode) // find
-    if (!d) return console.log("Khong tim thay ma giam gia")
+    showUserInformation(email: string): void {
+        const u = this.users.find(x => x.email === email)
+        if (!u) return console.log("Không tìm thấy")
+        console.log(u.getDetails())
+        console.log("Khóa học đã mua:", u.purchasedCourses.join(", ") || "(trống)")
+        console.log("Mã giảm giá:", u.discounts.join(", ") || "(trống)")
+    }
 
-    u.discounts.push(discountCode)
-    console.log("Da tang ma giam gia")
-  }
+    calculateTotalRevenue(): number {
+        return this.courses.reduce((sum, c) => sum + c.price * c.students, 0)
+    }
 
-  getCertificate(userId: string): void {
-    const u = this.users.find(x => x.id === userId) // find
-    if (!u) return console.log("Khong tim thay nguoi dung")
+    giftDiscount(userId: string, discountCode: string): void {
+        
+    }
 
-    if (u.purchasedCourses.length === 0) return console.log("Nguoi dung chua mua khoa hoc nao")
-    u.purchasedCourses.forEach(cid => {
-      const c = this.courses.find(cc => cc.courseId === cid)
-      if (c) console.log(c.getCertificate())
-    })
-  }
+    getCertificate(userId: string): void {
+        const u = this.users.find(x => x.id === userId)
+        if (!u) return console.log("Không tìm thấy")
+        if (u.purchasedCourses.length === 0) return console.log("Chưa mua khóa học nào")
+        u.purchasedCourses.forEach(cid => {
+            const c = this.courses.find(cc => cc.courseId === cid)
+            if (c) console.log(c.getCertificate())
+        })
+    }
 
-  getRefundPolicy(courseId: string): void {
-    const c = this.courses.find(cc => cc.courseId === courseId) // find
-    if (!c) return console.log("Khong tim thay khoa hoc")
-    console.log(c.getRefundPolicy())
-  }
+    getRefundPolicy(courseId: string): void {
+        const c = this.courses.find(cc => cc.courseId === courseId)
+        if (!c) return console.log("Không tìm thấy khóa học")
+        console.log(c.getRefundPolicy())
+    }
 }
 
-import promptSync from "prompt-sync"
+import promptSync = require("prompt-sync")
 const prompt = promptSync({ sigint: true })
 
 function ask(msg: string): string {
-  return prompt(msg)?.trim()
+    return prompt(msg)?.trim()
 }
 
 function printMenu(): void {
-  console.log("=== Quan ly khoa hoc online ===")
-  console.log("1. Them nguoi dung")
-  console.log("2. Them khoa hoc")
-  console.log("3. Them ma giam gia")
-  console.log("4. Mua khoa hoc")
-  console.log("5. Hoan tien khoa hoc")
-  console.log("6. Hien thi danh sach khoa hoc")
-  console.log("7. Hien thi thong tin nguoi dung")
-  console.log("8. Tinh tong doanh thu")
-  console.log("9. Tang ma giam gia")
-  console.log("10. Hien thi chung chi nguoi dung")
-  console.log("11. Hien thi chinh sach hoan tien")
-  console.log("12. Thoat")
+    console.log("\n=== Quản lý khóa học online ===")
+    console.log("1. Thêm người dùng")
+    console.log("2. Thêm khóa học")
+    console.log("3. Thêm mã giảm giá")
+    console.log("4. Mua khóa học")
+    console.log("5. Hoàn tiền khóa học")
+    console.log("6. Hiển thị danh sách khóa học")
+    console.log("7. Hiển thị thông tin người dùng")
+    console.log("8. Tính tổng doanh thu")
+    console.log("9. Tặng mã giảm giá")
+    console.log("10. Hiển thị chứng chỉ người dùng")
+    console.log("11. Hiển thị chính sách hoàn tiền")
+    console.log("12. Thoát")
 }
 
-async function main() {
-  const cm = new CourseManager()
-  let ch = 0
-
-  do {
-    printMenu()
-    ch = parseInt(ask("Chon: ") || "0")
-
-    switch (ch) {
-      case 1: {
-        const n = ask("Ten: ")
-        const e = ask("Email: ")
-        const p = ask("SDT: ")
-        if (!n || !e || !p) { console.log("Thong tin khong hop le"); break }
-        cm.createUser(n, e, p)
-        console.log("Da them nguoi dung")
-        break
-      }
-      case 2: {
-        const t = (ask("Loai (free/paid): ") || "").toLowerCase()
-        const name = ask("Ten khoa hoc: ")
-        let price = 0
-        if (t === "paid") price = parseInt(ask("Gia: ") || "0")
-        const dur = parseFloat(ask("Thoi luong: ") || "0")
-        if (!name || isNaN(dur) || (t !== "free" && t !== "paid")) { console.log("Du lieu khong hop le"); break }
-        cm.addCourse(t as "free" | "paid", name, price, dur)
-        console.log("Da them khoa hoc")
-        break
-      }
-      case 3: {
-        const code = ask("Ma: ")
-        const val = parseInt(ask("Gia tri %: ") || "0")
-        if (!code || isNaN(val)) { console.log("Du lieu khong hop le"); break }
-        cm.createNewDiscount(code, val)
-        console.log("Da them ma giam gia")
-        break
-      }
-      case 4: {
-        const uid = ask("ID nguoi dung: ")
-        const cid = ask("ID khoa hoc: ")
-        console.log(cm.handleBuyCourse(uid, cid))
-        break
-      }
-      case 5: {
-        const uid = ask("ID nguoi dung: ")
-        const cid = ask("ID khoa hoc: ")
-        console.log(cm.handleRefundCourse(uid, cid))
-        break
-      }
-      case 6: {
-        const num = ask("Loc theo so hoc vien (bo trong neu khong): ")
-        cm.listCourses(num ? parseInt(num) : undefined)
-        break
-      }
-      case 7: {
-        const email = ask("Nhap email: ")
-        cm.showUserInformation(email)
-        break
-      }
-      case 8: {
-        console.log("Tong doanh thu:", cm.calculateTotalRevenue())
-        break
-      }
-      case 9: {
-        const uid = ask("ID nguoi dung: ")
-        const code = ask("Ma giam gia: ")
-        cm.giftDiscount(uid, code)
-        break
-      }
-      case 10: {
-        const uid = ask("ID nguoi dung: ")
-        cm.getCertificate(uid)
-        break
-      }
-      case 11: {
-        const cid = ask("ID khoa hoc: ")
-        cm.getRefundPolicy(cid)
-        break
-      }
-      case 12:
-        console.log("Tam biet")
-        break
-      default:
-        console.log("Lua chon khong hop le!")
-    }
-  } while (ch !== 12)
+function main() {
+    const cm = new CourseManager()
+    let ch = 0
+    do {
+        printMenu()
+        ch = parseInt(ask("Chọn: ") || "0")
+        switch (ch) {
+            case 1:
+                cm.createUser(ask("Tên: "), ask("Email: "), ask("SDT: "))
+                break
+            case 2:
+                const t = ask("Loại (free/paid): ") as "free" | "paid"
+                const name = ask("Tên khóa học: ")
+                let price = 0
+                if (t === "paid") price = parseInt(ask("Giá: "))
+                const dur = parseFloat(ask("Thời lượng: "))
+                cm.addCourse(t, name, price, dur)
+                break
+            case 3:
+                cm.createNewDiscount(ask("Mã: "), parseInt(ask("Giá trị %: ")))
+                break
+            case 4:
+                console.log(cm.handleBuyCourse(ask("ID người dùng: "), ask("ID khóa học: ")))
+                break
+            case 5:
+                console.log(cm.handleRefundCourse(ask("ID người dùng: "), ask("ID khóa học: ")))
+                break
+            case 6:
+                const num = ask("Lọc theo số học viên (bỏ trống nếu không): ")
+                cm.listCourses(num ? parseInt(num) : undefined)
+                break
+            case 7:
+                cm.showUserInformation(ask("Nhập email: "))
+                break
+            case 8:
+                console.log("Tổng doanh thu:", cm.calculateTotalRevenue())
+                break
+            case 9:
+                cm.giftDiscount(ask("ID người dùng: "), ask("Mã giảm giá: "))
+                break
+            case 10:
+                cm.getCertificate(ask("ID người dùng: "))
+                break
+            case 11:
+                cm.getRefundPolicy(ask("ID khóa học: "))
+                break
+            case 12:
+                console.log("Tạm biệt!")
+                break
+            default:
+                console.log("Lựa chọn không hợp lệ!")
+        }
+    } while (ch !== 12)
 }
 
 main()
-
-
