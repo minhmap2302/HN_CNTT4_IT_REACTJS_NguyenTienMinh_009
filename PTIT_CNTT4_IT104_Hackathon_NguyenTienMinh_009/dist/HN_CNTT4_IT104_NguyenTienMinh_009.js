@@ -1,31 +1,22 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 class Course {
     constructor(courseId, courseName, price, duration) {
+        this.students = 0;
         this.courseId = courseId;
         this.courseName = courseName;
         this.price = price;
         this.duration = duration;
-        this.students = 0;
     }
     displayCourse() {
-        console.log(`#${this.courseId} | ${this.courseName} | Gia: ${this.price} | Thoi luong: ${this.duration} | Hoc vien: ${this.students}`);
+        console.log(`#${this.courseId} | ${this.courseName} | Giá: ${this.price} | Thời lượng: ${this.duration} | Học viên: ${this.students}`);
     }
     getCourse(discount) {
         this.students++;
         let cost = this.price;
         if (discount)
-            cost = cost * (1 - discount / 100);
-        return `Mua khoa hoc ${this.courseName} voi gia ${cost}`;
+            cost = Math.round(this.price * (1 - discount / 100));
+        return `Mua khóa học ${this.courseName} với giá ${cost}`;
     }
 }
 class FreeCourse extends Course {
@@ -33,10 +24,10 @@ class FreeCourse extends Course {
         super(courseId, courseName, 0, duration);
     }
     getCertificate() {
-        return "Khoa hoc mien phi khong co chung chi";
+        return "Khóa học miễn phí không có chứng chỉ";
     }
     getRefundPolicy() {
-        return "Khong co chinh sach hoan tien";
+        return "Không có chính sách hoàn tiền";
     }
 }
 class PaidCourse extends Course {
@@ -44,26 +35,26 @@ class PaidCourse extends Course {
         super(courseId, courseName, price, duration);
     }
     getCertificate() {
-        return `Chung chi khoa hoc: ${this.courseName}`;
+        return `Chứng chỉ khóa học: ${this.courseName}`;
     }
     getRefundPolicy() {
-        return this.duration < 2 ? "Hoan tien neu thoi gian hoc duoi 2 gio" : "Khong hoan tien neu thoi gian hoc >= 2 gio";
+        return this.duration < 2 ? "Hoàn tiền nếu thời gian học dưới 2 giờ" : "Không hoàn tiền";
     }
 }
 class User {
     constructor(id, name, email, phone) {
+        this.purchasedCourses = [];
+        this.discounts = [];
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
-        this.purchasedCourses = [];
-        this.discounts = [];
     }
     getDetails() {
-        return `ID: ${this.id} | Ten: ${this.name} | Email: ${this.email} | SDT: ${this.phone}`;
+        return `ID: ${this.id} | Tên: ${this.name} | Email: ${this.email} | SDT: ${this.phone}`;
     }
-    buyCourse(courseId) {
-        this.purchasedCourses.push(courseId);
+    buyCourse(course) {
+        this.purchasedCourses.push(course);
     }
 }
 class CourseManager {
@@ -73,50 +64,46 @@ class CourseManager {
         this.discounts = [];
     }
     addCourse(type, name, price, duration) {
-        let id = "C" + (this.courses.length + 1);
-        let c;
-        if (type === "free")
-            c = new FreeCourse(id, name, duration);
-        else
-            c = new PaidCourse(id, name, price, duration);
-        this.courses.push(c);
+        const id = "C" + (this.courses.length + 1);
+        const course = type === "free" ? new FreeCourse(id, name, duration) : new PaidCourse(id, name, price, duration);
+        this.courses.push(course);
     }
     createUser(name, email, phone) {
-        let id = "U" + (this.users.length + 1);
-        let u = new User(id, name, email, phone);
-        this.users.push(u);
+        const id = "U" + (this.users.length + 1);
+        this.users.push(new User(id, name, email, phone));
     }
     createNewDiscount(code, value) {
         this.discounts.push({ code, value });
     }
     handleBuyCourse(userId, courseId) {
-        let u = this.users.find(x => x.id === userId);
-        let c = this.courses.find(x => x.courseId === courseId);
+        const u = this.users.find(x => x.id === userId);
+        const c = this.courses.find(x => x.courseId === courseId);
         if (!u || !c)
-            return "Khong tim thay";
+            return "Không tìm thấy";
         let discountValue = 0;
         if (u.discounts.length > 0) {
-            let owned = this.discounts.filter(d => u.discounts.includes(d.code));
+            const owned = this.discounts.filter(d => u.discounts.includes(d.code));
             if (owned.length > 0) {
-                let best = owned.reduce((max, cur) => cur.value > max.value ? cur : max);
+                const best = owned.reduce((max, cur) => cur.value > max.value ? cur : max);
                 discountValue = best.value;
-                u.discounts = u.discounts.filter(dc => dc !== best.code);
+                u.discounts = u.discounts.filter(code => code !== best.code);
             }
         }
-        let msg = c.getCourse(discountValue);
+        const msg = c.getCourse(discountValue);
         u.buyCourse(c.courseId);
         return msg;
     }
     handleRefundCourse(userId, courseId) {
-        let u = this.users.find(x => x.id === userId);
-        let c = this.courses.find(x => x.courseId === courseId);
+        const u = this.users.find(x => x.id === userId);
+        const c = this.courses.find(x => x.courseId === courseId);
         if (!u || !c)
-            return "Khong tim thay";
+            return "Không tìm thấy";
         if (c instanceof PaidCourse && c.duration < 2) {
             u.purchasedCourses = u.purchasedCourses.filter(pc => pc !== courseId);
-            return "Da hoan tien khoa hoc";
+            c.students = Math.max(0, c.students - 1);
+            return "Đã hoàn tiền khóa học";
         }
-        return "Khong the hoan tien";
+        return "Không thể hoàn tiền";
     }
     listCourses(numOfStudents) {
         let lst = this.courses;
@@ -125,154 +112,112 @@ class CourseManager {
         lst.map(c => c.displayCourse());
     }
     showUserInformation(email) {
-        let u = this.users.find(x => x.email === email);
-        if (!u) {
-            console.log("Khong tim thay");
-            return;
-        }
+        const u = this.users.find(x => x.email === email);
+        if (!u)
+            return console.log("Không tìm thấy");
         console.log(u.getDetails());
-        console.log("Khoa hoc da mua:", u.purchasedCourses.join(", "));
-        console.log("Ma giam gia:", u.discounts.join(", "));
+        console.log("Khóa học đã mua:", u.purchasedCourses.join(", ") || "(trống)");
+        console.log("Mã giảm giá:", u.discounts.join(", ") || "(trống)");
     }
     calculateTotalRevenue() {
         return this.courses.reduce((sum, c) => sum + c.price * c.students, 0);
     }
-    giftDiscount(userId, code) {
-        let u = this.users.find(x => x.id === userId);
-        if (!u) {
-            console.log("Khong tim thay nguoi dung");
-            return;
-        }
-        let d = this.discounts.find(dd => dd.code === code);
-        if (!d) {
-            console.log("Khong tim thay ma giam gia");
-            return;
-        }
-        u.discounts.push(code);
-        console.log("Da tang ma giam gia");
+    giftDiscount(userId, discountCode) {
     }
     getCertificate(userId) {
-        let u = this.users.find(x => x.id === userId);
-        if (!u) {
-            console.log("Khong tim thay nguoi dung");
-            return;
-        }
+        const u = this.users.find(x => x.id === userId);
+        if (!u)
+            return console.log("Không tìm thấy");
+        if (u.purchasedCourses.length === 0)
+            return console.log("Chưa mua khóa học nào");
         u.purchasedCourses.forEach(cid => {
-            let c = this.courses.find(cc => cc.courseId === cid);
+            const c = this.courses.find(cc => cc.courseId === cid);
             if (c)
                 console.log(c.getCertificate());
         });
     }
     getRefundPolicy(courseId) {
-        let c = this.courses.find(cc => cc.courseId === courseId);
-        if (!c) {
-            console.log("Khong tim thay khoa hoc");
-            return;
-        }
+        const c = this.courses.find(cc => cc.courseId === courseId);
+        if (!c)
+            return console.log("Không tìm thấy khóa học");
         console.log(c.getRefundPolicy());
     }
 }
-const readline = require("readline");
-function input(question) {
-    let rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise(res => rl.question(question, ans => {
-        rl.close();
-        res(ans);
-    }));
+const promptSync = require("prompt-sync");
+const prompt = promptSync({ sigint: true });
+function ask(msg) {
+    var _a;
+    return (_a = prompt(msg)) === null || _a === void 0 ? void 0 : _a.trim();
+}
+function printMenu() {
+    console.log("\n=== Quản lý khóa học online ===");
+    console.log("1. Thêm người dùng");
+    console.log("2. Thêm khóa học");
+    console.log("3. Thêm mã giảm giá");
+    console.log("4. Mua khóa học");
+    console.log("5. Hoàn tiền khóa học");
+    console.log("6. Hiển thị danh sách khóa học");
+    console.log("7. Hiển thị thông tin người dùng");
+    console.log("8. Tính tổng doanh thu");
+    console.log("9. Tặng mã giảm giá");
+    console.log("10. Hiển thị chứng chỉ người dùng");
+    console.log("11. Hiển thị chính sách hoàn tiền");
+    console.log("12. Thoát");
 }
 function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        let cm = new CourseManager();
-        let ch;
-        do {
-            console.log("=== Quan ly khoa hoc online ===");
-            console.log("1. Them nguoi dung");
-            console.log("2. Them khoa hoc");
-            console.log("3. Them ma giam gia");
-            console.log("4. Mua khoa hoc");
-            console.log("5. Hoan tien khoa hoc");
-            console.log("6. Hien thi danh sach khoa hoc");
-            console.log("7. Hien thi thong tin nguoi dung");
-            console.log("8. Tinh tong doanh thu");
-            console.log("9. Tang ma giam gia");
-            console.log("10. Hien thi chung chi nguoi dung");
-            console.log("11. Hien thi chinh sach hoan tien");
-            console.log("12. Thoat");
-            ch = parseInt(yield input("Chon: "));
-            switch (ch) {
-                case 1: {
-                    let n = yield input("Ten: ");
-                    let e = yield input("Email: ");
-                    let p = yield input("SDT: ");
-                    cm.createUser(n, e, p);
-                    break;
-                }
-                case 2: {
-                    let t = yield input("Loai (free/paid): ");
-                    let name = yield input("Ten khoa hoc: ");
-                    let price = 0;
-                    if (t === "paid")
-                        price = parseInt(yield input("Gia: "));
-                    let dur = parseFloat(yield input("Thoi luong: "));
-                    cm.addCourse(t, name, price, dur);
-                    break;
-                }
-                case 3: {
-                    let code = yield input("Ma: ");
-                    let val = parseInt(yield input("Gia tri %: "));
-                    cm.createNewDiscount(code, val);
-                    break;
-                }
-                case 4: {
-                    let uid = yield input("ID nguoi dung: ");
-                    let cid = yield input("ID khoa hoc: ");
-                    console.log(cm.handleBuyCourse(uid, cid));
-                    break;
-                }
-                case 5: {
-                    let uid = yield input("ID nguoi dung: ");
-                    let cid = yield input("ID khoa hoc: ");
-                    console.log(cm.handleRefundCourse(uid, cid));
-                    break;
-                }
-                case 6: {
-                    let num = yield input("Loc theo so hoc vien (bo trong neu khong): ");
-                    cm.listCourses(num ? parseInt(num) : undefined);
-                    break;
-                }
-                case 7: {
-                    let email = yield input("Nhap email: ");
-                    cm.showUserInformation(email);
-                    break;
-                }
-                case 8: {
-                    console.log("Tong doanh thu:", cm.calculateTotalRevenue());
-                    break;
-                }
-                case 9: {
-                    let uid = yield input("ID nguoi dung: ");
-                    let code = yield input("Ma giam gia: ");
-                    cm.giftDiscount(uid, code);
-                    break;
-                }
-                case 10: {
-                    let uid = yield input("ID nguoi dung: ");
-                    cm.getCertificate(uid);
-                    break;
-                }
-                case 11: {
-                    let cid = yield input("ID khoa hoc: ");
-                    cm.getRefundPolicy(cid);
-                    break;
-                }
-                case 12: {
-                    console.log("Tam biet");
-                    break;
-                }
-                default:
-                    console.log("Lua chon khong hop le!");
-            }
-        } while (ch !== 12);
-    });
+    const cm = new CourseManager();
+    let ch = 0;
+    do {
+        printMenu();
+        ch = parseInt(ask("Chọn: ") || "0");
+        switch (ch) {
+            case 1:
+                cm.createUser(ask("Tên: "), ask("Email: "), ask("SDT: "));
+                break;
+            case 2:
+                const t = ask("Loại (free/paid): ");
+                const name = ask("Tên khóa học: ");
+                let price = 0;
+                if (t === "paid")
+                    price = parseInt(ask("Giá: "));
+                const dur = parseFloat(ask("Thời lượng: "));
+                cm.addCourse(t, name, price, dur);
+                break;
+            case 3:
+                cm.createNewDiscount(ask("Mã: "), parseInt(ask("Giá trị %: ")));
+                break;
+            case 4:
+                console.log(cm.handleBuyCourse(ask("ID người dùng: "), ask("ID khóa học: ")));
+                break;
+            case 5:
+                console.log(cm.handleRefundCourse(ask("ID người dùng: "), ask("ID khóa học: ")));
+                break;
+            case 6:
+                const num = ask("Lọc theo số học viên (bỏ trống nếu không): ");
+                cm.listCourses(num ? parseInt(num) : undefined);
+                break;
+            case 7:
+                cm.showUserInformation(ask("Nhập email: "));
+                break;
+            case 8:
+                console.log("Tổng doanh thu:", cm.calculateTotalRevenue());
+                break;
+            case 9:
+                cm.giftDiscount(ask("ID người dùng: "), ask("Mã giảm giá: "));
+                break;
+            case 10:
+                cm.getCertificate(ask("ID người dùng: "));
+                break;
+            case 11:
+                cm.getRefundPolicy(ask("ID khóa học: "));
+                break;
+            case 12:
+                console.log("Tạm biệt!");
+                break;
+            default:
+                console.log("Lựa chọn không hợp lệ!");
+        }
+    } while (ch !== 12);
 }
 main();
+
